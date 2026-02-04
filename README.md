@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Cloud Customer Support Automation Platform</title>
+    <title>AI Cloud Customer Support Platform</title>
 
     <style>
         body {
