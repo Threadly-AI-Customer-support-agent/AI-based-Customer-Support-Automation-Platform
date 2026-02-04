@@ -1,6 +1,4 @@
-=====================================================
-AI CLOUD CUSTOMER SUPPORT AUTOMATION PLATFORM
-=====================================================
+AI CLOUD CUSTOMER SUPPORT PLATFORM
 
 Overview
 --------
@@ -37,6 +35,4 @@ To build a scalable, intelligent, and automated customer support
 platform that enhances user experience while minimizing human
 intervention and operational costs.
 
------------------------------------------------------
 Developed as an AI + Cloud Engineering Project
------------------------------------------------------
