@@ -29,7 +29,6 @@ async def api_transcribe(file: UploadFile = File(...)):
     """
     try:
         # 1. Generate a safe file path
-        # We replace spaces with underscores to prevent OS errors
         safe_filename = file.filename.replace(" ", "_")
         file_location = os.path.join(UPLOAD_DIR, safe_filename)
         
@@ -39,9 +38,6 @@ async def api_transcribe(file: UploadFile = File(...)):
         
         # 3. Process with AI
         transcribed_text = transcribe_file(file_location)
-        
-        # 4. Cleanup (Optional: Enable this in production)
-        # os.remove(file_location)
 
         # 5. Return Standard JSON Response
         return {
