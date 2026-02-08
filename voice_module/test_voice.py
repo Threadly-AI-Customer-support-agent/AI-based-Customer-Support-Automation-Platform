@@ -5,13 +5,11 @@ import os
 url = "http://127.0.0.1:8000/transcribe/"
 
 # 1. Create a dummy audio file for testing if one doesn't exist
-# (In reality, you should put a real 'sample.mp3' in this folder)
 test_filename = "sample.mp3"
 
 if not os.path.exists(test_filename):
     print(f"⚠️ Warning: '{test_filename}' not found.")
     print("Please place a real audio file named 'sample.mp3' in this folder to test properly.")
-    # We create a fake file just so the script doesn't crash, but it won't transcribe.
     with open(test_filename, "w") as f:
         f.write("This is not real audio")
 
