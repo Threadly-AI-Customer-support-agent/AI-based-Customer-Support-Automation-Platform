@@ -1,0 +1,54 @@
+.landingPageContainer {
+    background: linear-gradient(135deg, #050505, #121212); /* Deep dark theme */
+    min-height: 100vh;
+    color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.glassNavbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 8%;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px); /* Glass effect */
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.navLinks {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+}
+
+.registerBtn {
+    background: #00f6ff; /* Neon Cyan */
+    color: black !important;
+    padding: 8px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.registerBtn:hover {
+    box-shadow: 0 0 15px #00f6ff; /* Neon glow */
+}
+
+.landingMain {
+    display: flex;
+    padding: 80px 8%;
+    align-items: center;
+    justify-content: space-between;
+}
+
+span {
+    color: #00f6ff;
+    text-shadow: 0 0 8px #00f6ff;
+}
+
+.heroImage {
+    max-width: 500px;
+    filter: drop-shadow(0 0 20px rgba(0, 246, 255, 0.2));
+}
