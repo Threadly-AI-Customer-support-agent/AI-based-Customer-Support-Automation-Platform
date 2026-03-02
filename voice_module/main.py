@@ -50,4 +50,4 @@ async def api_transcribe(file: UploadFile = File(...)):
         # Returns a 500 error that the frontend can catch and display
         raise HTTPException(status_code=500, detail=str(e))
 
-# Run with: uvicorn main:app --reload
+# Run with: c
