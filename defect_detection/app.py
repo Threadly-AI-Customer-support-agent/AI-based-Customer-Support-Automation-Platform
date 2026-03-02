@@ -10,8 +10,7 @@ import os
 app = FastAPI(title="Clothing Defect Detection API", version="1.0")
 
 # --- 1. AI Model Setup ---
-# We must recreate the exact "empty brain" structure before loading our saved weights
-device = torch.device("cpu") # Force CPU since free cloud tiers don't have GPUs
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 try:
     # Load base ResNet18
@@ -21,11 +20,14 @@ try:
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, 2)
     
+    model = model.to(device)
+    
     # Load your trained weights (Make sure you downloaded this from Colab!)
     model_path = "clothing_defect_model.pth"
     if not os.path.exists(model_path):
         print(f"WARNING: '{model_path}' not found. Endpoint will fail until you add it.")
     else:
+        # map_location=device ensures the weights are loaded directly to the GPU
         model.load_state_dict(torch.load(model_path, map_location=device))
         model.eval() # Set to evaluation mode (turns off training features)
         print("AI Model loaded successfully!")
@@ -33,16 +35,12 @@ except Exception as e:
     print(f"Error loading model: {e}")
 
 # --- 2. Image Preprocessing ---
-# The AI expects the image to be formatted exactly how it was during training
 image_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-# Map the AI's numerical output (0 or 1) to human-readable text
-# NOTE: Ensure this matches the alphabetical folder order from your Colab training!
-# Usually, 'defective' comes before 'not_defective' alphabetically.
 CLASS_NAMES = ["Defective", "Not Defective"] 
 
 # --- 3. The API Endpoint ---
