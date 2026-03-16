@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(CUSTOMER)
+  createdAt    DateTime   @default(now())
+  messages     Message[]
+  tickets      Ticket[]
+  orders       Order[]
+  feedback     Feedback[]
+}
+
+enum Role {
+  CUSTOMER
+  AGENT
+  ADMIN
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  content   String
+  sender    Sender
+  type      MessageType @default(TEXT)
+  sentiment String?
+  createdAt DateTime    @default(now())
+}
+
+enum Sender {
+  USER
+  AI
+}
+
+enum MessageType {
+  TEXT
+  VOICE
+  IMAGE
+}
+
+model Ticket {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  priority    Priority     @default(LOW)
+  status      TicketStatus @default(OPEN)
+  category    String?
+  assignedTo  String?
+  angryCount  Int          @default(0)
+  aiFailCount Int          @default(0)
+  createdAt   DateTime     @default(now())
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketStatus {
+  OPEN
+  ESCALATED
+  CLOSED
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  productName String
+  status      OrderStatus @default(PROCESSING)
+  trackingNo  String?
+  createdAt   DateTime    @default(now())
+  returns     Return[]
+}
+
+enum OrderStatus {
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Return {
+  id          String       @id @default(uuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id])
+  ticketId    String?
+  imagePath   String?
+  defectLabel String?
+  confidence  Float?
+  status      ReturnStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+}
+
+enum ReturnStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+}
