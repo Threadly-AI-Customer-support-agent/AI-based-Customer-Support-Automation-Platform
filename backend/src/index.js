@@ -1,37 +1,28 @@
-// 1. Dotenv ko sabse pehle load karo
-import 'dotenv/config' 
+import 'dotenv/config'; 
+import express from 'express';
+import cors from 'cors';
 
-import express from "express"
-import cors from "cors"
-import authRoutes from "./routes/auth.js"
-// import chatRoutes from "./routes/chat.js" // Future use ke liye
+import authRoutes from './routes/auth.js';
+import chatRoutes from './routes/chat.js';
+import orderRoutes from './routes/orders.js';
+import ticketRoutes from './routes/tickets.js';
 
-const app = express()
+const app = express();
 
-// ## Middleware
-app.use(cors())
-app.use(express.json()) // JSON body parse karne ke liye
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ## Routes
-app.use("/api/auth", authRoutes)
+app.use('/api/auth', authRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/tickets', ticketRoutes);
 
-// ## Health Check Route
-app.get("/", (req, res) => {
-  res.json({ 
-    message: "Server chal raha hai ✅",
-    database: "PostgreSQL Connected (via Prisma)",
-    cache: "Redis Ready"
-  })
-})
+app.get('/', (req, res) => {
+  res.json({ message: 'Server is running ✅' });
+});
 
-// ## Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack)
-  res.status(500).json({ message: "Kuch galat hua!", error: err.message })
-})
-
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server port ${PORT} pe live hai!`)
-  console.log(`🔗 Local URL: http://localhost:${PORT}`)
-})
+  console.log(`Server running on port ${PORT} ✅`);
+});
