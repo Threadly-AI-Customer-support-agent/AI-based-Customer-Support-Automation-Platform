@@ -1,4 +1,5 @@
 import axios from 'axios';
+import FormData from 'form-data';
 
 const AI_URL = process.env.AI_URL || 'http://localhost:8000';
 
@@ -25,9 +26,15 @@ export const getSentiment = async (message) => {
 // 3. Vision — Image analyze karo
 export const analyzeImage = async (imageBuffer) => {
   try {
-    const response = await axios.post(`${AI_URL}/vision/analyze`, { image: imageBuffer });
+    const formData = new FormData();
+    formData.append('image', imageBuffer, { filename: 'upload.jpg', contentType: 'image/jpeg' });
+    
+    const response = await axios.post(`${AI_URL}/vision/analyze`, formData, {
+      headers: formData.getHeaders()
+    });
     return response.data;
   } catch (error) {
+    console.error("vision error:", error.message);
     return { defect: 'unknown', confidence: 0 };
   }
 };
@@ -35,9 +42,15 @@ export const analyzeImage = async (imageBuffer) => {
 // 4. Voice — Audio to text
 export const transcribeVoice = async (audioBuffer) => {
   try {
-    const response = await axios.post(`${AI_URL}/voice/transcribe`, { audio: audioBuffer });
+    const formData = new FormData();
+    formData.append('audio', audioBuffer, { filename: 'upload.wav', contentType: 'audio/wav' });
+
+    const response = await axios.post(`${AI_URL}/voice/transcribe`, formData, {
+      headers: formData.getHeaders()
+    });
     return response.data;
   } catch (error) {
+    console.error("voice error:", error.message);
     return { text: '' };
   }
 };

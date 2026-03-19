@@ -53,7 +53,7 @@ async def vision_analyze(image: UploadFile = File(...)):
 async def voice_transcribe(audio: UploadFile = File(...)):
     try:
         audio_bytes = await audio.read()
-        result = transcribe_audio(audio_bytes)
+        result = transcribe_audio(audio_bytes, audio.filename)
         return result # Returns { "text": "..." }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

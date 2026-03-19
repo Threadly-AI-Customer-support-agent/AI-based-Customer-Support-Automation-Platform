@@ -24,7 +24,7 @@ async def generate_reply(user_message: str, user_id: str) -> str:
     # 1. Retrieve the Knowledge
     company_knowledge = load_faqs()
     
-    # 2. Augment the Prompt (This is the magic of RAG!)
+    # 2. Augment the Prompt 
     system_prompt = f"""
     You are a helpful, empathetic customer support agent for a clothing brand. 
     Always base your answers strictly on the COMPANY FAQ below. 
@@ -40,7 +40,7 @@ async def generate_reply(user_message: str, user_id: str) -> str:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}
         ],
-        model="llama3-8b-8192", 
+        model="llama-3.1-8b-instant", 
         temperature=0.3, # Lower temperature makes the AI more factual and less likely to hallucinate
     )
     
