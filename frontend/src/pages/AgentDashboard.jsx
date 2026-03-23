@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getEscalatedTickets, getAllTickets, updateTicketStatus, assignTicket } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { logout } from '../services/api'
+import { TextScramble } from '../components/ui/text-scramble'
 
 export default function AgentDashboard() {
   const [tickets, setTickets] = useState([])
@@ -83,12 +84,12 @@ export default function AgentDashboard() {
   const displayTickets = activeTab === 'escalated' ? escalatedTickets : tickets
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-transparent">
 
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white/5 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-white font-semibold">Agent Dashboard</h1>
+          <TextScramble as="h1" className="text-white font-semibold">Threadly Dashboard</TextScramble>
           <p className="text-gray-400 text-xs">Manage customer support tickets</p>
         </div>
         <button
@@ -102,15 +103,15 @@ export default function AgentDashboard() {
       {/* Stats */}
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-center">
+          <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-4 text-center">
             <p className="text-3xl font-bold text-white">{tickets.length}</p>
             <p className="text-gray-400 text-xs mt-1">Total Tickets</p>
           </div>
-          <div className="bg-gray-900 border border-red-900/30 rounded-2xl p-4 text-center">
+          <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-4 text-center">
             <p className="text-3xl font-bold text-red-400">{escalatedTickets.length}</p>
             <p className="text-gray-400 text-xs mt-1">Escalated</p>
           </div>
-          <div className="bg-gray-900 border border-green-900/30 rounded-2xl p-4 text-center">
+          <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-4 text-center">
             <p className="text-3xl font-bold text-green-400">
               {tickets.filter(t => t.status === 'CLOSED').length}
             </p>
@@ -122,21 +123,19 @@ export default function AgentDashboard() {
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => setActiveTab('escalated')}
-            className={`px-4 py-2 rounded-xl text-sm transition ${
-              activeTab === 'escalated'
-                ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                : 'text-gray-400 border border-gray-800 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-sm transition ${activeTab === 'escalated'
+              ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+              : 'text-gray-400 border border-white/10 hover:text-white hover:bg-white/5'
+              }`}
           >
             🔴 Escalated ({escalatedTickets.length})
           </button>
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-4 py-2 rounded-xl text-sm transition ${
-              activeTab === 'all'
-                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                : 'text-gray-400 border border-gray-800 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-sm transition ${activeTab === 'all'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+              : 'text-gray-400 border border-white/10 hover:text-white hover:bg-white/5'
+              }`}
           >
             📋 All Tickets ({tickets.length})
           </button>
@@ -169,7 +168,7 @@ export default function AgentDashboard() {
             {displayTickets.map((ticket) => (
               <div
                 key={ticket.id}
-                className="bg-gray-900 border border-gray-800 rounded-2xl p-5"
+                className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-5"
               >
                 {/* Ticket Header */}
                 <div className="flex items-start justify-between mb-4">
@@ -193,13 +192,13 @@ export default function AgentDashboard() {
 
                 {/* Ticket Info */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-gray-800 rounded-xl px-4 py-3">
+                  <div className="bg-black/20 rounded-xl px-4 py-3">
                     <p className="text-gray-400 text-xs mb-1">Angry Count</p>
                     <p className="text-white text-sm font-medium">
                       {ticket.angryCount} / 3
                     </p>
                   </div>
-                  <div className="bg-gray-800 rounded-xl px-4 py-3">
+                  <div className="bg-black/20 rounded-xl px-4 py-3">
                     <p className="text-gray-400 text-xs mb-1">Created</p>
                     <p className="text-white text-sm">
                       {new Date(ticket.createdAt).toLocaleDateString('en-IN')}

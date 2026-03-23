@@ -60,10 +60,10 @@ export default function Orders() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-transparent">
 
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center gap-4">
+      <div className="bg-white/5 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center gap-4">
         <button
           onClick={() => navigate('/chat')}
           className="text-gray-400 hover:text-white transition"
@@ -94,7 +94,7 @@ export default function Orders() {
             <p className="text-gray-400 text-sm mt-2">Your orders will appear here</p>
             <button
               onClick={() => navigate('/chat')}
-              className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm transition"
+              className="mt-6 bg-white text-black hover:bg-gray-200 font-medium px-6 py-2 rounded-xl text-sm transition"
             >
               Go to Chat
             </button>
@@ -107,7 +107,7 @@ export default function Orders() {
             {orders.map((order) => (
               <div
                 key={order.id}
-                className="bg-gray-900 border border-gray-800 rounded-2xl p-5"
+                className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-5"
               >
                 {/* Order Header */}
                 <div className="flex items-start justify-between mb-4">
@@ -124,7 +124,7 @@ export default function Orders() {
 
                 {/* Tracking */}
                 {order.trackingNo && (
-                  <div className="bg-gray-800 rounded-xl px-4 py-3 mb-4">
+                  <div className="bg-black/20 rounded-xl px-4 py-3 mb-4">
                     <p className="text-gray-400 text-xs mb-1">Tracking Number</p>
                     <p className="text-white text-sm font-mono">{order.trackingNo}</p>
                   </div>
@@ -156,7 +156,7 @@ export default function Orders() {
                     <button
                       onClick={() => handleReturn(order.id)}
                       disabled={returningId === order.id}
-                      className="w-full border border-red-900 text-red-400 hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed py-2 rounded-xl text-sm transition"
+                      className="w-full border border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed py-2 rounded-xl text-sm transition"
                     >
                       {returningId === order.id ? 'Processing...' : '↩ Initiate Return'}
                     </button>

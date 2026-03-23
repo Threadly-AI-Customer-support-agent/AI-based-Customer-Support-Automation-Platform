@@ -5,6 +5,8 @@ import Register from './pages/Register'
 import Chat from './pages/Chat'
 import Orders from './pages/Orders'
 import AgentDashboard from './pages/AgentDashboard'
+import Landing from './pages/Landing'
+import { Component as EtheralShadow } from './components/ui/etheral-shadow'
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
@@ -31,22 +33,32 @@ const AgentRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/chat" element={
-            <ProtectedRoute><Chat /></ProtectedRoute>
-          } />
-          <Route path="/orders" element={
-            <ProtectedRoute><Orders /></ProtectedRoute>
-          } />
-          <Route path="/dashboard" element={
-            <AgentRoute><AgentDashboard /></AgentRoute>
-          } />
-          <Route path="*" element={<Navigate to="/login" />} />
-        </Routes>
-      </BrowserRouter>
+      <EtheralShadow
+        color="rgba(255, 255, 255, 1)"
+        animation={{ scale: 100, speed: 90 }}
+        noise={{ opacity: 1, scale: 1.2 }}
+        className="fixed inset-0 z-0 pointer-events-none"
+        sizing="fill"
+      />
+      <div className="relative z-10 w-full h-full min-h-screen">
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/chat" element={
+              <ProtectedRoute><Chat /></ProtectedRoute>
+            } />
+            <Route path="/orders" element={
+              <ProtectedRoute><Orders /></ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
+              <AgentRoute><AgentDashboard /></AgentRoute>
+            } />
+            <Route path="*" element={<Navigate to="/login" />} />
+          </Routes>
+        </BrowserRouter>
+      </div>
     </AuthProvider>
   )
 }

@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+models/*.pth  # Optional: un-comment this if your CNN model is over 100MB
+
+# Node.js
+node_modules/
+backend/uploads/
+
+# OS Files
+.DS_Store
+
+.env
