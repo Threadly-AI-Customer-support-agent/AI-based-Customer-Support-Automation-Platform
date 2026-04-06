@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Chat from './pages/Chat'
 import Orders from './pages/Orders'
+import FAQs from './pages/FAQs'
 import AgentDashboard from './pages/AgentDashboard'
 import Landing from './pages/Landing'
 import { Component as EtheralShadow } from './components/ui/etheral-shadow'
@@ -51,6 +52,9 @@ function App() {
             } />
             <Route path="/orders" element={
               <ProtectedRoute><Orders /></ProtectedRoute>
+            } />
+            <Route path="/faqs" element={
+              <ProtectedRoute><FAQs /></ProtectedRoute>
             } />
             <Route path="/dashboard" element={
               <AgentRoute><AgentDashboard /></AgentRoute>

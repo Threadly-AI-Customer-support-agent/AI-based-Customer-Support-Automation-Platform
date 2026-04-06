@@ -12,6 +12,12 @@ const router = express.Router()
 router.post("/register", async (req, res) => {
   try {
     const { email, password, role } = req.body
+
+    // Only CUSTOMER registration is allowed — agents are created by admins
+    if (role && role !== "CUSTOMER") {
+      return res.status(403).json({ message: "Only customer registration is allowed" })
+    }
+
     const existingUser = await prisma.user.findUnique({ where: { email } })
 
     if (existingUser) {
@@ -23,7 +29,7 @@ router.post("/register", async (req, res) => {
       data: {
         email,
         passwordHash,
-        role: role || "CUSTOMER",
+        role: "CUSTOMER",
       },
     })
 
@@ -42,7 +48,11 @@ router.post("/login", async (req, res) => {
     const { email, password } = req.body
     const user = await prisma.user.findUnique({ where: { email } })
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user) {
+      return res.status(400).json({ message: "Email ya password galat hai" })
+    }
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash)
+    if (!isValidPassword) {
       return res.status(400).json({ message: "Email ya password galat hai" })
     }
 
@@ -82,8 +92,12 @@ router.post("/logout", async (req, res) => {
     const token = req.headers.authorization?.split(" ")[1]
     if (!token) return res.status(400).json({ message: "Token nahi mila" })
 
-    // Token ko blacklist mein dalo (Redis)
-    await redis.set(`blacklist_${token}`, "true", { EX: 604800 })
+    // Token ko blacklist mein dalo (Redis) — skip if Redis is down
+    try {
+      await redis.set(`blacklist_${token}`, "true", { EX: 604800 })
+    } catch (err) {
+      console.warn("Could not blacklist token in Redis:", err.message)
+    }
     res.json({ message: "Logout successful" })
   } catch (error) {
     res.status(500).json({ message: "Kuch galat hua", error: error.message })

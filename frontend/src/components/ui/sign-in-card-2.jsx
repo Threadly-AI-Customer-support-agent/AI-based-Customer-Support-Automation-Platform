@@ -27,6 +27,7 @@ export function SignInCard({
     bottomText = "Don't have an account?",
     bottomLink = "/register",
     bottomLinkText = "Sign up",
+    showRoleToggle = true,
     onSubmit
 }) {
     const [showPassword, setShowPassword] = useState(false);
@@ -35,6 +36,7 @@ export function SignInCard({
     const [isLoading, setIsLoading] = useState(false);
     const [focusedInput, setFocusedInput] = useState(null);
     const [rememberMe, setRememberMe] = useState(false);
+    const [selectedRole, setSelectedRole] = useState("CUSTOMER");
 
     // For 3D card effect - increased rotation range for more pronounced 3D effect
     const mouseX = useMotionValue(0);
@@ -57,14 +59,17 @@ export function SignInCard({
         event.preventDefault();
         setIsLoading(true);
         if (onSubmit) {
-            await onSubmit({ email, password });
+            try {
+                await onSubmit({ email, password, role: selectedRole });
+            } catch (err) {
+                // error handled by parent
+            }
         }
-        // Only reset loading if there was an error preventing navigation
         setTimeout(() => setIsLoading(false), 2000);
     };
 
     return (
-        <div className="min-h-screen w-screen bg-transparent relative overflow-hidden flex items-center justify-center">
+        <div className="min-h-screen w-screen bg-transparent relative overflow-hidden flex flex-col items-center justify-center">
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -162,6 +167,7 @@ export function SignInCard({
 
                             {/* Login form */}
                             <form onSubmit={handleFormSubmit} className="space-y-4">
+
                                 <motion.div className="space-y-3">
                                     {/* Email input */}
                                     <motion.div
@@ -264,6 +270,24 @@ export function SignInCard({
                     </div>
                 </motion.div>
             </motion.div>
+
+            {/* Agent login button — outside the 3D card to guarantee clickability */}
+            {showRoleToggle && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    className="relative z-20 mt-4 flex justify-center"
+                >
+                    <button
+                        type="button"
+                        onClick={() => setSelectedRole(prev => prev === 'CUSTOMER' ? 'AGENT' : 'CUSTOMER')}
+                        className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-medium rounded-xl border border-white/10 bg-white/[0.05] text-white/50 hover:text-white hover:bg-white/[0.12] hover:border-white/25 backdrop-blur-sm transition-all duration-300 cursor-pointer"
+                    >
+                        {selectedRole === 'CUSTOMER' ? 'Sign in as Agent →' : '← Back to User sign in'}
+                    </button>
+                </motion.div>
+            )}
         </div>
     );
 }

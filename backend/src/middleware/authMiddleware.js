@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken"
 import redis from "../lib/redis.js"
+import { getRedisStatus } from "../lib/redis.js"
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -10,10 +11,16 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: "Token nahi mila" })
     }
 
-    // Redis mein check karo — blacklist mein toh nahi
-    const isBlacklisted = await redis.get(`blacklist_${token}`)
-    if (isBlacklisted) {
-      return res.status(401).json({ message: "Token invalid hai" })
+    // Redis mein check karo — blacklist mein toh nahi (skip if Redis is down)
+    if (getRedisStatus()) {
+      try {
+        const isBlacklisted = await redis.get(`blacklist_${token}`)
+        if (isBlacklisted) {
+          return res.status(401).json({ message: "Token invalid hai" })
+        }
+      } catch (err) {
+        console.warn("Redis blacklist check skipped:", err.message)
+      }
     }
 
     // Token verify karo

@@ -6,7 +6,7 @@ torchvision==0.17.1
 torchaudio==2.2.1
 Pillow==10.2.0
 transformers==4.38.2
-groq==1.1.1
+groq==1.1.2
 python-dotenv==1.0.1
 openai-whisper==20231117
 numpy<2

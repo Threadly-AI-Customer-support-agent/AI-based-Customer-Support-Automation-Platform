@@ -12,15 +12,12 @@ export default function Register() {
   const handleSubmit = async ({ email, password }) => {
     setError('')
     try {
-      await register({ email, password })
+      // Always register as CUSTOMER — agents are created by admins
+      await register({ email, password, role: 'CUSTOMER' })
       const res = await login({ email, password })
-      loginUser(res.data.token, res.data.user)
 
-      if (res.data.user.role === 'CUSTOMER') {
-        navigate('/chat')
-      } else {
-        navigate('/dashboard')
-      }
+      loginUser(res.data.token, res.data.user)
+      navigate('/chat')
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed')
       throw err
@@ -43,8 +40,9 @@ export default function Register() {
         bottomText="Already have an account?"
         bottomLink="/login"
         bottomLinkText="Sign in"
+        showRoleToggle={false}
         onSubmit={handleSubmit}
       />
     </>
   )
-}
+}
