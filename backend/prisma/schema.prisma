@@ -11,8 +11,9 @@ model User {
   email        String     @unique
   passwordHash String
   role         Role       @default(CUSTOMER)
-  createdAt    DateTime   @default(now())
+  createdAt    DateTime      @default(now())
   messages     Message[]
+  sessions     ChatSession[]
   tickets      Ticket[]
   orders       Order[]
   feedback     Feedback[]
@@ -32,7 +33,19 @@ model Message {
   sender    Sender
   type      MessageType @default(TEXT)
   sentiment String?
+  sessionId String?
+  session   ChatSession? @relation(fields: [sessionId], references: [id])
   createdAt DateTime    @default(now())
+}
+
+model ChatSession {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  title     String?   
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
 }
 
 enum Sender {

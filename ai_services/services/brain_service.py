@@ -1,11 +1,12 @@
 import os
-from groq import Groq
+from groq import AsyncGroq
+import traceback
 
 def get_groq_client():
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise ValueError("GROQ_API_KEY is missing from .env file")
-    return Groq(api_key=api_key)
+    return AsyncGroq(api_key=api_key)
 
 def load_faqs():
     """Reads the FAQ text file to act as our RAG Knowledge Base."""
@@ -35,13 +36,17 @@ async def generate_reply(user_message: str, user_id: str) -> str:
     """
     
     # 3. Generate the Answer
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ],
-        model="llama-3.1-8b-instant", 
-        temperature=0.3, # Lower temperature makes the AI more factual and less likely to hallucinate
-    )
-    
-    return chat_completion.choices[0].message.content
+    try:
+        chat_completion = await client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            model="llama-3.1-8b-instant",
+            temperature=0.3, # Lower temperature makes the AI more factual and less likely to hallucinate
+        )
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        print("Groq API Error:")
+        traceback.print_exc()
+        raise e

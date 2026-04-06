@@ -9,20 +9,34 @@ export default function Login() {
   const { loginUser } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = async ({ email, password }) => {
+  const handleSubmit = async ({ email, password, role }) => {
     setError('')
     try {
       const res = await login({ email, password })
+      const actualRole = res.data.user.role
+
+      // Validate the selected role matches the account's actual role
+      if (role === 'AGENT' && actualRole !== 'AGENT') {
+        setError('This account is not registered as an Agent.')
+        throw new Error('Role mismatch')
+      }
+      if (role === 'CUSTOMER' && actualRole !== 'CUSTOMER') {
+        setError('This account is not registered as a User.')
+        throw new Error('Role mismatch')
+      }
+
       loginUser(res.data.token, res.data.user)
 
-      if (res.data.user.role === 'CUSTOMER') {
+      if (actualRole === 'CUSTOMER') {
         navigate('/chat')
       } else {
         navigate('/dashboard')
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed')
-      throw err // Alert the component to reset loading state if desired
+      if (!err.message?.includes('Role mismatch')) {
+        setError(err.response?.data?.message || 'Login failed')
+      }
+      throw err
     }
   }
 

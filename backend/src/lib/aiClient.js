@@ -2,23 +2,26 @@ import axios from 'axios';
 import FormData from 'form-data';
 
 const AI_URL = process.env.AI_URL || 'http://localhost:8000';
+const AI_TIMEOUT = 10000; // 10 second timeout
 
 // 1. Brain — AI se reply lo
 export const getBrainResponse = async (message, userId) => {
   try {
-    const response = await axios.post(`${AI_URL}/brain/respond`, { message, userId });
+    const response = await axios.post(`${AI_URL}/brain/respond`, { message, userId }, { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
-    return { reply: "I'm sorry, I couldn't process that. Please try again." };
+    console.warn('AI Brain service unavailable:', error.message);
+    return { reply: "I'm sorry, our AI service is temporarily unavailable. Please try again in a moment, or I can connect you with a human agent." };
   }
 };
 
 // 2. Sentiment — Emotion detect karo
 export const getSentiment = async (message) => {
   try {
-    const response = await axios.post(`${AI_URL}/sentiment/analyze`, { text: message });
+    const response = await axios.post(`${AI_URL}/sentiment/analyze`, { text: message }, { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
+    console.warn('AI Sentiment service unavailable:', error.message);
     return { label: 'NEUTRAL', score: 0.5 };
   }
 };

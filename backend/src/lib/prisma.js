@@ -1,5 +1,5 @@
 import pkgClient from '@prisma/client';
-const { PrismaClient } = pkgClient; // Ye line error solve kar degi
+const { PrismaClient } = pkgClient;
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import pkgPg from "pg";

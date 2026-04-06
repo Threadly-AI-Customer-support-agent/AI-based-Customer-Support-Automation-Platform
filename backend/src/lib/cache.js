@@ -1,8 +1,9 @@
-import redis from './redis.js'
+import redis, { getRedisStatus } from './redis.js'
 
 const CACHE_TTL = 60 * 60
 
 export const setCache = async (key, data) => {
+  if (!getRedisStatus()) return
   try {
     await redis.set(key, JSON.stringify(data), { EX: CACHE_TTL })
   } catch (error) {
@@ -11,6 +12,7 @@ export const setCache = async (key, data) => {
 }
 
 export const getCache = async (key) => {
+  if (!getRedisStatus()) return null
   try {
     const data = await redis.get(key)
     return data ? JSON.parse(data) : null
@@ -21,6 +23,7 @@ export const getCache = async (key) => {
 }
 
 export const deleteCache = async (key) => {
+  if (!getRedisStatus()) return
   try {
     await redis.del(key)
   } catch (error) {

@@ -9,20 +9,42 @@ import { uploadImage, uploadAudio } from '../lib/upload.js';
 
 const router = express.Router();
 
+// HELPER: Auto-create session if none exists
+const getOrCreateSession = async (userId, sessionId, firstMessageContent) => {
+  if (sessionId) {
+    await prisma.chatSession.update({
+      where: { id: sessionId },
+      data: { updatedAt: new Date() }
+    }).catch(() => { }); // handle silent failure if bad ID
+    return sessionId;
+  }
+  const title = typeof firstMessageContent === 'string'
+    ? firstMessageContent.substring(0, 40) + (firstMessageContent.length > 40 ? '...' : '')
+    : 'New Chat';
+
+  const newSession = await prisma.chatSession.create({
+    data: { userId, title }
+  });
+  return newSession.id;
+};
+
 // ─── 1. MESSAGE BHEJO ────────────────────────────────────────────
 router.post('/message', authMiddleware, async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, sessionId } = req.body;
     const userId = req.user.id;
 
     if (!message) return res.status(400).json({ message: 'Message is required' });
 
+    // Ensure session track
+    const currentSessionId = await getOrCreateSession(userId, sessionId, message);
+
     // Cache clear karo — naya message aaya hai
-    await deleteCache(`chat:history:${userId}`);
+    await deleteCache(`chat:${currentSessionId}`);
 
     // Step 1: User message save karo
     await prisma.message.create({
-      data: { userId, content: message, sender: 'USER', type: 'TEXT' }
+      data: { userId, content: message, sender: 'USER', type: 'TEXT', sessionId: currentSessionId }
     });
 
     // Step 2: Sentiment check karo
@@ -39,25 +61,46 @@ router.post('/message', authMiddleware, async (req, res) => {
         content: aiResponse.reply,
         sender: 'AI',
         type: 'TEXT',
-        sentiment: sentimentLabel
+        sentiment: sentimentLabel,
+        sessionId: currentSessionId
       }
     });
 
     // Step 5: Ticket Logic
     await handleTicketLogic(userId, sentimentLabel, message);
 
-    res.json({ reply: aiResponse.reply, sentiment: sentimentLabel });
+    res.json({ reply: aiResponse.reply, sentiment: sentimentLabel, sessionId: currentSessionId });
 
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// ─── 2. CHAT HISTORY ─────────────────────────────────────────────
+// ─── 2. SESSIONS & HISTORY ───────────────────────────────────────
+router.get('/sessions', authMiddleware, async (req, res) => {
+  try {
+    const sessions = await prisma.chatSession.findMany({
+      where: { userId: req.user.id },
+      orderBy: { updatedAt: 'desc' },
+      take: 50
+    });
+    res.json({ sessions });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error retrieving sessions' });
+  }
+});
+
 router.get('/history', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-    const cacheKey = `chat:history:${userId}`;
+    const { sessionId } = req.query;
+
+    if (!sessionId) {
+      return res.status(400).json({ message: 'Missing sessionId' });
+    }
+
+    const cacheKey = `chat:${sessionId}`;
 
     // Pehle Redis check karo
     const cachedMessages = await getCache(cacheKey);
@@ -68,9 +111,9 @@ router.get('/history', authMiddleware, async (req, res) => {
 
     // Cache mein nahi tha — DB se lo
     const messages = await prisma.message.findMany({
-      where: { userId },
+      where: { userId, sessionId },
       orderBy: { createdAt: 'asc' },
-      take: 20
+      take: 50
     });
 
     // Redis mein save karo
@@ -110,6 +153,9 @@ router.post('/image', authMiddleware, uploadImage.single('image'), async (req, r
 
     const userId = req.user.id;
     const imagePath = req.file.path;
+    const { sessionId } = req.body;
+
+    const currentSessionId = await getOrCreateSession(userId, sessionId, 'Uploaded an Image');
 
     // Step 1: User message save karo
     await prisma.message.create({
@@ -117,7 +163,8 @@ router.post('/image', authMiddleware, uploadImage.single('image'), async (req, r
         userId,
         content: `[Image uploaded: ${req.file.filename}]`,
         sender: 'USER',
-        type: 'IMAGE'
+        type: 'IMAGE',
+        sessionId: currentSessionId
       }
     });
 
@@ -128,12 +175,15 @@ router.post('/image', authMiddleware, uploadImage.single('image'), async (req, r
     // Step 3: Confidence check karo
     let aiReply = '';
     let shouldInitiateReturn = false;
+    let isEscalated = false;
 
     if (visionResult.confidence >= 0.70) {
       aiReply = `Defect detected: "${visionResult.defect}" with ${Math.round(visionResult.confidence * 100)}% confidence. Return approved automatically ✅`;
       shouldInitiateReturn = true;
     } else {
       aiReply = `Image received. Confidence is low (${Math.round((visionResult.confidence || 0) * 100)}%). Human agent will review ⚠️`;
+      // Actually escalate the ticket for human review
+      isEscalated = true;
     }
 
     // Step 4: AI reply save karo
@@ -142,12 +192,13 @@ router.post('/image', authMiddleware, uploadImage.single('image'), async (req, r
         userId,
         content: aiReply,
         sender: 'AI',
-        type: 'TEXT'
+        type: 'TEXT',
+        sessionId: currentSessionId
       }
     });
 
     // Step 5: Cache clear karo
-    await deleteCache(`chat:history:${userId}`);
+    await deleteCache(`chat:${currentSessionId}`);
 
     // Step 6: Return initiate karo agar high confidence
     if (shouldInitiateReturn) {
@@ -168,11 +219,58 @@ router.post('/image', authMiddleware, uploadImage.single('image'), async (req, r
       }
     }
 
+    // Step 7: Escalate ticket if confidence is low
+    if (isEscalated) {
+      try {
+        let ticket = await prisma.ticket.findFirst({
+          where: { userId, status: { in: ['OPEN', 'ESCALATED'] } }
+        });
+
+        if (!ticket) {
+          ticket = await prisma.ticket.create({
+            data: { userId, priority: 'LOW', status: 'OPEN', angryCount: 0 }
+          });
+        }
+
+        if (ticket.status !== 'ESCALATED') {
+          await prisma.ticket.update({
+            where: { id: ticket.id },
+            data: { status: 'ESCALATED', priority: 'HIGH' }
+          });
+
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { email: true }
+          });
+
+          if (user && user.email) {
+            await sendAgentEmail({
+              ticketId: ticket.id,
+              priority: 'HIGH',
+              customerEmail: user.email,
+              reason: `Low confidence image analysis (${Math.round((visionResult.confidence || 0) * 100)}%) — needs human review`
+            });
+
+            await sendCustomerEmail({
+              ticketId: ticket.id,
+              customerEmail: user.email,
+              agentEmail: process.env.AGENT_EMAIL
+            });
+
+            console.log(`Image escalation: emails sent for ticket ${ticket.id} ✅`);
+          }
+        }
+      } catch (err) {
+        console.error('Image escalation error:', err);
+      }
+    }
+
     res.json({
       reply: aiReply,
       defect: visionResult.defect,
       confidence: visionResult.confidence,
-      returnInitiated: shouldInitiateReturn
+      returnInitiated: shouldInitiateReturn,
+      escalated: isEscalated
     });
 
   } catch (error) {
@@ -190,6 +288,7 @@ router.post('/voice', authMiddleware, uploadAudio.single('audio'), async (req, r
 
     const userId = req.user.id;
     const audioPath = req.file.path;
+    const { sessionId } = req.body;
 
     // Step 1: Audio ko text mein convert karo
     const audioBuffer = fs.readFileSync(audioPath);
@@ -200,13 +299,16 @@ router.post('/voice', authMiddleware, uploadAudio.single('audio'), async (req, r
       return res.status(400).json({ message: 'Audio transcribe nahi ho saka' });
     }
 
+    const currentSessionId = await getOrCreateSession(userId, sessionId, transcribedText);
+
     // Step 2: Voice message save karo
     await prisma.message.create({
       data: {
         userId,
         content: transcribedText,
         sender: 'USER',
-        type: 'VOICE'
+        type: 'VOICE',
+        sessionId: currentSessionId
       }
     });
 
@@ -225,12 +327,13 @@ router.post('/voice', authMiddleware, uploadAudio.single('audio'), async (req, r
         content: aiReply,
         sender: 'AI',
         type: 'TEXT',
-        sentiment: sentimentLabel
+        sentiment: sentimentLabel,
+        sessionId: currentSessionId
       }
     });
 
     // Step 6: Cache clear karo
-    await deleteCache(`chat:history:${userId}`);
+    await deleteCache(`chat:${currentSessionId}`);
 
     // Step 7: Ticket logic
     await handleTicketLogic(userId, sentimentLabel, transcribedText);
