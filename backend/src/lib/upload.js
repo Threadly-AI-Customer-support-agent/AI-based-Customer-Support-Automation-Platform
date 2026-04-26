@@ -2,7 +2,7 @@ import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
 
-// Uploads folder banao agar nahi hai
+// Ensure uploads folder exists
 const uploadDir = 'uploads'
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir)
@@ -14,7 +14,9 @@ const storage = multer.diskStorage({
     cb(null, 'uploads/')
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`
+    // Sanitize filename: remove path traversal chars and spaces
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const uniqueName = `${Date.now()}-${safeName}`
     cb(null, uniqueName)
   }
 })
@@ -25,17 +27,18 @@ const imageFilter = (req, file, cb) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true)
   } else {
-    cb(new Error('Sirf images allowed hain'), false)
+    cb(new Error('Only image files are allowed'), false)
   }
 }
 
-// Audio filter
+// Audio filter — browsers send MIME types with codec suffixes (e.g. "audio/ogg; codecs=opus")
+// so we use startsWith matching instead of exact equality
 const audioFilter = (req, file, cb) => {
-  const allowedTypes = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/webm', 'audio/ogg']
-  if (allowedTypes.includes(file.mimetype)) {
+  const allowedPrefixes = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/webm', 'audio/ogg', 'audio/mp4']
+  if (allowedPrefixes.some(prefix => file.mimetype.startsWith(prefix))) {
     cb(null, true)
   } else {
-    cb(new Error('Sirf audio files allowed hain'), false)
+    cb(new Error('Only audio files are allowed'), false)
   }
 }
 

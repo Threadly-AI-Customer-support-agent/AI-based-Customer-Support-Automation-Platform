@@ -43,6 +43,26 @@ router.get('/my', authMiddleware, async (req, res) => {
   }
 });
 
+// ## ─── ESCALATED TICKETS (Filter) ────────────────────────
+// NOTE: This MUST be registered before /:ticketId to prevent "filter" from being matched as a ticketId
+router.get('/filter/escalated', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role === 'CUSTOMER') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    const tickets = await prisma.ticket.findMany({
+      where: { status: 'ESCALATED' },
+      include: {
+        user: { select: { id: true, email: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ tickets });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ## ─── SINGLE TICKET ────────────────────────────────────
 router.get('/:ticketId', authMiddleware, async (req, res) => {
   try {
@@ -103,21 +123,57 @@ router.patch('/:ticketId/assign', authMiddleware, async (req, res) => {
   }
 });
 
-// ## ─── ESCALATED TICKETS (Filter) ────────────────────────
-router.get('/filter/escalated', authMiddleware, async (req, res) => {
+// ## ─── TICKET CHAT HISTORY (Agent views customer messages) ──
+router.get('/:ticketId/messages', authMiddleware, async (req, res) => {
   try {
     if (req.user.role === 'CUSTOMER') {
       return res.status(403).json({ message: 'Access denied' });
     }
-    const tickets = await prisma.ticket.findMany({
-      where: { status: 'ESCALATED' },
-      include: {
-        user: { select: { id: true, email: true } }
-      },
-      orderBy: { createdAt: 'desc' }
+
+    // Find the ticket to get the customer's userId
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: req.params.ticketId },
+      select: { userId: true }
     });
-    res.json({ tickets });
+
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    // Get the customer's most recent chat sessions with messages
+    const sessions = await prisma.chatSession.findMany({
+      where: { userId: ticket.userId },
+      orderBy: { updatedAt: 'desc' },
+      take: 3, // Last 3 sessions for context
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            content: true,
+            sender: true,
+            type: true,
+            sentiment: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+    // Flatten all messages from recent sessions, sorted by time
+    const allMessages = sessions
+      .flatMap(s => s.messages.map(m => ({
+        ...m,
+        sessionTitle: s.title
+      })))
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    res.json({
+      ticketId: req.params.ticketId,
+      customerId: ticket.userId,
+      messageCount: allMessages.length,
+      messages: allMessages
+    });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 });

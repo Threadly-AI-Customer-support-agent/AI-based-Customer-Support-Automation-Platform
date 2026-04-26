@@ -1,11 +1,11 @@
 import express from 'express';
-import prisma from '../lib/prisma.js'; // .js extension zaroori hai
-import authMiddleware from '../middleware/authMiddleware.js'; // Humne middleware ka naam yahi rakha tha
+import prisma from '../lib/prisma.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 import { seedOrders } from '../lib/seed.js';
 
 const router = express.Router();
 
-// ─── 1. SEED ORDERS (Sirf testing ke liye) ───────────────────
+// ─── 1. SEED ORDERS (For testing only) ───────────────────
 router.post('/seed', authMiddleware, async (req, res) => {
   try {
     await seedOrders(req.user.id);
@@ -37,7 +37,7 @@ router.get('/:orderId', authMiddleware, async (req, res) => {
     const order = await prisma.order.findFirst({
       where: {
         id: req.params.orderId,
-        userId: req.user.id // Sirf apna order dekh sake
+        userId: req.user.id // Only show user's own orders
       },
       include: { returns: true }
     });
@@ -56,14 +56,14 @@ router.post('/:orderId/return', authMiddleware, async (req, res) => {
   try {
     const { defectLabel, confidence, imagePath } = req.body;
 
-    // Order check karo
+    // Check if order exists
     const order = await prisma.order.findFirst({
       where: { id: req.params.orderId, userId: req.user.id }
     });
 
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
-    // Already return hai?
+    // Already has a return?
     const existingReturn = await prisma.return.findFirst({
       where: { orderId: order.id }
     });
@@ -72,7 +72,7 @@ router.post('/:orderId/return', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Return already initiated for this order' });
     }
 
-    // Return banao
+    // Create return record
     const newReturn = await prisma.return.create({
       data: {
         orderId: order.id,
@@ -109,6 +109,12 @@ router.post('/:orderId/return', authMiddleware, async (req, res) => {
 // ─── 5. PROCESS REFUND ──────────────────────────────────
 router.post('/:orderId/refund', authMiddleware, async (req, res) => {
   try {
+    // Verify the user owns this order
+    const order = await prisma.order.findFirst({
+      where: { id: req.params.orderId, userId: req.user.id }
+    });
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
     const returnRecord = await prisma.return.findFirst({
       where: {
         orderId: req.params.orderId,
@@ -122,7 +128,7 @@ router.post('/:orderId/refund', authMiddleware, async (req, res) => {
       });
     }
 
-    // Order aur Return status update karo
+    // Update order and return status
     await prisma.order.update({
       where: { id: req.params.orderId },
       data: { status: 'CANCELLED' }

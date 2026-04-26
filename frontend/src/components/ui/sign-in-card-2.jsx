@@ -61,11 +61,15 @@ export function SignInCard({
         if (onSubmit) {
             try {
                 await onSubmit({ email, password, role: selectedRole });
+                // Only keep spinner for successful submit (navigation delay)
+                setTimeout(() => setIsLoading(false), 2000);
             } catch (err) {
-                // error handled by parent
+                // Stop spinner immediately on error so user can retry
+                setIsLoading(false);
             }
+        } else {
+            setIsLoading(false);
         }
-        setTimeout(() => setIsLoading(false), 2000);
     };
 
     return (

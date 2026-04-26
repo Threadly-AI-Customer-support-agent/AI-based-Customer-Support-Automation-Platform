@@ -8,11 +8,14 @@ def get_groq_client():
         raise ValueError("GROQ_API_KEY is missing from .env file")
     return AsyncGroq(api_key=api_key)
 
+from pathlib import Path
+
 def load_faqs():
     """Reads the FAQ text file to act as our RAG Knowledge Base."""
     try:
-        # Assumes faqs.txt is in the root of your ai_services folder
-        with open("faqs.txt", "r") as file:
+        # Resolve path relative to this file's parent directory (ai_services/)
+        faq_path = Path(__file__).resolve().parent.parent / "faqs.txt"
+        with open(faq_path, "r") as file:
             return file.read()
     except FileNotFoundError:
         print("WARNING: faqs.txt not found. AI will answer without context.")

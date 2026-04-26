@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api'
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 })
 
 API.interceptors.request.use((config) => {
@@ -38,3 +38,4 @@ export const getEscalatedTickets = () => API.get('/tickets/filter/escalated')
 export const updateTicketStatus = (id, data) => API.patch(`/tickets/${id}/status`, data)
 export const assignTicket = (id) => API.patch(`/tickets/${id}/assign`)
 export const resolveTicket = (id, data) => API.patch(`/tickets/${id}/status`, { status: 'CLOSED', priority: 'LOW', ...data })
+export const getTicketMessages = (ticketId) => API.get(`/tickets/${ticketId}/messages`)
