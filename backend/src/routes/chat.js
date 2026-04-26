@@ -1,5 +1,5 @@
 import express from 'express';
-import fs from 'fs';
+import fs from 'fs/promises';
 import prisma from '../lib/prisma.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import { getBrainResponse, getSentiment, analyzeImage, transcribeVoice } from '../lib/aiClient.js';
@@ -47,12 +47,12 @@ router.post('/message', authMiddleware, async (req, res) => {
       data: { userId, content: message, sender: 'USER', type: 'TEXT', sessionId: currentSessionId }
     });
 
-    // Step 2: Sentiment check karo
-    const sentiment = await getSentiment(message);
+    // Step 2+3: Sentiment + AI reply — run in parallel for performance
+    const [sentiment, aiResponse] = await Promise.all([
+      getSentiment(message),
+      getBrainResponse(message, userId)
+    ]);
     const sentimentLabel = sentiment.label || 'NEUTRAL';
-
-    // Step 3: AI reply lo
-    const aiResponse = await getBrainResponse(message, userId);
 
     // Step 4: AI reply DB mein save karo
     await prisma.message.create({
@@ -169,7 +169,7 @@ router.post('/image', authMiddleware, uploadImage.single('image'), async (req, r
     });
 
     // Step 2: Vision AI ko bhejo
-    const imageBuffer = fs.readFileSync(imagePath);
+    const imageBuffer = await fs.readFile(imagePath);
     const visionResult = await analyzeImage(imageBuffer);
 
     // Step 3: Confidence check karo
@@ -291,7 +291,7 @@ router.post('/voice', authMiddleware, uploadAudio.single('audio'), async (req, r
     const { sessionId } = req.body;
 
     // Step 1: Audio ko text mein convert karo
-    const audioBuffer = fs.readFileSync(audioPath);
+    const audioBuffer = await fs.readFile(audioPath);
     const transcription = await transcribeVoice(audioBuffer);
     const transcribedText = transcription.text;
 
@@ -312,12 +312,12 @@ router.post('/voice', authMiddleware, uploadAudio.single('audio'), async (req, r
       }
     });
 
-    // Step 3: Sentiment check karo
-    const sentiment = await getSentiment(transcribedText);
+    // Step 3+4: Sentiment + Brain AI — run in parallel for performance
+    const [sentiment, aiResponse] = await Promise.all([
+      getSentiment(transcribedText),
+      getBrainResponse(transcribedText, userId)
+    ]);
     const sentimentLabel = sentiment.label || 'NEUTRAL';
-
-    // Step 4: Brain AI ko bhejo
-    const aiResponse = await getBrainResponse(transcribedText, userId);
     const aiReply = aiResponse.reply;
 
     // Step 5: AI reply save karo

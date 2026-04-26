@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { getMe } from '../services/api'
+import { getMe, logout } from '../services/api'
 
 const AuthContext = createContext()
 
@@ -24,7 +24,13 @@ export const AuthProvider = ({ children }) => {
     setUser(userData)
   }
 
-  const logoutUser = () => {
+  const logoutUser = async () => {
+    // Call backend to blacklist the token in Redis
+    try {
+      await logout()
+    } catch (err) {
+      console.warn('Backend logout failed:', err.message)
+    }
     localStorage.removeItem('token')
     setUser(null)
   }

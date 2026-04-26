@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAllTickets, getEscalatedTickets, updateTicketStatus, assignTicket, resolveTicket, logout } from '../services/api'
+import { getAllTickets, getEscalatedTickets, updateTicketStatus, assignTicket, resolveTicket, logout, getTicketMessages } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { TextScramble } from '../components/ui/text-scramble'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LogOut, X, AlertTriangle, CheckCircle, Clock, ChevronRight, Send, Shield, Ticket, Flame, TrendingUp } from 'lucide-react'
+import { LogOut, X, AlertTriangle, CheckCircle, Clock, ChevronRight, Send, Shield, Ticket, Flame, TrendingUp, MessageSquare, Bot, User } from 'lucide-react'
 
 // ── Mock Data (used as fallback when backend is unavailable) ──────────
 const MOCK_TICKETS = [
@@ -186,6 +186,8 @@ export default function AgentDashboard() {
   const [resolutionNotes, setResolutionNotes] = useState('')
   const [toast, setToast] = useState(null)
   const [usingMock, setUsingMock] = useState(false)
+  const [chatMessages, setChatMessages] = useState([])
+  const [chatLoading, setChatLoading] = useState(false)
 
   const { user, logoutUser } = useAuth()
   const navigate = useNavigate()
@@ -437,6 +439,15 @@ export default function AgentDashboard() {
                     if (ticket.status !== 'CLOSED') {
                       setSelectedTicket(ticket)
                       setResolutionNotes('')
+                      // Fetch customer chat messages
+                      if (!usingMock) {
+                        setChatLoading(true)
+                        setChatMessages([])
+                        getTicketMessages(ticket.id)
+                          .then(res => setChatMessages(res.data.messages || []))
+                          .catch(() => setChatMessages([]))
+                          .finally(() => setChatLoading(false))
+                      }
                     }
                   }}
                   className={`group relative bg-white/10 backdrop-blur-xl border rounded-2xl p-5 transition-all duration-300 ${
@@ -671,6 +682,77 @@ export default function AgentDashboard() {
                     </div>
                     <span className="text-gray-400 text-xs font-mono">{selectedTicket.angryCount}/3</span>
                   </div>
+                </div>
+
+                {/* Customer Chat History */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
+                    <p className="text-gray-500 text-[10px] uppercase tracking-wider">Customer Chat History</p>
+                  </div>
+
+                  {chatLoading && (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="flex gap-2">
+                          <div className="w-6 h-6 rounded-full bg-white/10 animate-pulse" />
+                          <div className="flex-1 h-12 rounded-xl bg-white/10 animate-pulse" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!chatLoading && chatMessages.length === 0 && (
+                    <div className="text-center py-6 bg-white/5 rounded-2xl border border-white/10">
+                      <MessageSquare className="w-6 h-6 text-gray-600 mx-auto mb-2" />
+                      <p className="text-gray-500 text-xs">No chat history found</p>
+                    </div>
+                  )}
+
+                  {!chatLoading && chatMessages.length > 0 && (
+                    <div className="bg-black/30 border border-white/10 rounded-2xl p-3 max-h-64 overflow-y-auto space-y-2">
+                      {chatMessages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`flex gap-2 ${msg.sender === 'AI' ? '' : 'flex-row-reverse'}`}
+                        >
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                            msg.sender === 'AI'
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : 'bg-purple-500/20 text-purple-400'
+                          }`}>
+                            {msg.sender === 'AI'
+                              ? <Bot className="w-3 h-3" />
+                              : <User className="w-3 h-3" />
+                            }
+                          </div>
+                          <div className={`max-w-[80%] px-3 py-2 rounded-xl text-xs ${
+                            msg.sender === 'AI'
+                              ? 'bg-white/5 text-gray-300 rounded-tl-sm'
+                              : 'bg-blue-500/10 text-blue-200 rounded-tr-sm'
+                          }`}>
+                            <p className="leading-relaxed break-words">
+                              {msg.type === 'VOICE' ? '🎙️ Voice message' : msg.type === 'IMAGE' ? '📸 Image uploaded' : msg.content}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-gray-600 text-[9px]">
+                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {msg.sentiment && msg.sentiment !== 'NEUTRAL' && (
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                                  msg.sentiment === 'ANGRY'
+                                    ? 'bg-red-500/15 text-red-400'
+                                    : 'bg-emerald-500/15 text-emerald-400'
+                                }`}>
+                                  {msg.sentiment}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Resolution Notes */}

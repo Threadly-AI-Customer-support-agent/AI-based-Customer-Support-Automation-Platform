@@ -23,9 +23,10 @@ export default function Chat() {
   const navigate = useNavigate()
   const messagesContainerRef = useRef(null)
   const mediaRecorderRef = useRef(null)
-  const audioChunksRef = useRef([]
-  )
+  const audioChunksRef = useRef([])
   const timerRef = useRef(null)
+  const recordingTimeRef = useRef(0)
+  const activeStreamRef = useRef(null)
 
   // ── Instant scroll to bottom (no animation, no jump) ──
   const scrollToBottom = useCallback(() => {
@@ -76,7 +77,9 @@ export default function Chat() {
   useEffect(() => {
     if (recording) {
       setRecordingTime(0)
+      recordingTimeRef.current = 0
       timerRef.current = setInterval(() => {
+        recordingTimeRef.current += 1
         setRecordingTime(prev => prev + 1)
       }, 1000)
     } else {
@@ -139,7 +142,7 @@ export default function Chat() {
 
   // ── Image upload ──
   const handleImageUpload = async (e) => {
-    const file = e.target?.files?.[0] || e
+    const file = e.target?.files?.[0]
     if (!file) return
 
     const previewURL = URL.createObjectURL(file)
@@ -190,12 +193,14 @@ export default function Chat() {
 
   // ── Voice toggle ──
   const handleVoiceToggle = async () => {
+    if (loading) return
     if (recording) {
       mediaRecorderRef.current?.stop()
       setRecording(false)
     } else {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        activeStreamRef.current = stream
         mediaRecorderRef.current = new MediaRecorder(stream)
         audioChunksRef.current = []
 
@@ -207,10 +212,11 @@ export default function Chat() {
           const mimeType = mediaRecorderRef.current.mimeType || 'audio/webm'
           const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
           const audioURL = URL.createObjectURL(audioBlob)
-          const duration = recordingTime
+          const duration = recordingTimeRef.current
 
           const formData = new FormData()
           formData.append('audio', audioBlob, 'recording.webm')
+          if (currentSessionId) formData.append('sessionId', currentSessionId)
 
           setMessages(prev => [...prev, {
             id: Date.now(),
@@ -223,8 +229,16 @@ export default function Chat() {
           setLoading(true)
           try {
             const res = await uploadVoice(formData)
+            if (res.data.transcribedText) {
+              setMessages(prev => [...prev, {
+                id: Date.now() + 1,
+                content: `🎙️ "${res.data.transcribedText}"`,
+                sender: 'USER',
+                type: 'TEXT'
+              }])
+            }
             setMessages(prev => [...prev, {
-              id: Date.now() + 1,
+              id: Date.now() + 2,
               content: res.data.reply,
               sender: 'AI',
               type: 'TEXT'
@@ -232,7 +246,7 @@ export default function Chat() {
           } catch (err) {
             setMessages(prev => [...prev, {
               id: Date.now() + 1,
-              content: 'Voice message sent. Processing...',
+              content: 'Voice message failed to process. Please try again.',
               sender: 'AI',
               type: 'TEXT'
             }])
@@ -241,12 +255,13 @@ export default function Chat() {
           }
 
           stream.getTracks().forEach(track => track.stop())
+          activeStreamRef.current = null
         }
 
         mediaRecorderRef.current.start()
         setRecording(true)
       } catch (err) {
-        alert('Microphone access denied')
+        alert('Microphone access denied. Please allow microphone access in your browser settings.')
       }
     }
   }
@@ -255,7 +270,13 @@ export default function Chat() {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.ondataavailable = null
       mediaRecorderRef.current.onstop = null
-      mediaRecorderRef.current.stop()
+      if (mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+      }
+    }
+    if (activeStreamRef.current) {
+      activeStreamRef.current.getTracks().forEach(track => track.stop())
+      activeStreamRef.current = null
     }
     setRecording(false)
     audioChunksRef.current = []

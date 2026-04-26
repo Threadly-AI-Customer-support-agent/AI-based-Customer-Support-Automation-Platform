@@ -1,16 +1,24 @@
 import express from "express"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
+import { body, validationResult } from "express-validator"
 import prisma from "../lib/prisma.js"
 import redis from "../lib/redis.js"
-// 👈 Ye line miss ho rahi thi
 import authMiddleware from "../middleware/authMiddleware.js" 
 
 const router = express.Router()
 
 // ## REGISTER
-router.post("/register", async (req, res) => {
+router.post("/register", [
+  body("email").isEmail().withMessage("Valid email is required"),
+  body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters")
+], async (req, res) => {
   try {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array()[0].msg })
+    }
+
     const { email, password, role } = req.body
 
     // Only CUSTOMER registration is allowed — agents are created by admins
@@ -21,7 +29,7 @@ router.post("/register", async (req, res) => {
     const existingUser = await prisma.user.findUnique({ where: { email } })
 
     if (existingUser) {
-      return res.status(400).json({ message: "Email already registered hai" })
+      return res.status(400).json({ message: "Email already registered" })
     }
 
     const passwordHash = await bcrypt.hash(password, 10)
@@ -38,22 +46,30 @@ router.post("/register", async (req, res) => {
       user: { id: user.id, email: user.email, role: user.role },
     })
   } catch (error) {
-    res.status(500).json({ message: "Kuch galat hua", error: error.message })
+    res.status(500).json({ message: "Server error", error: error.message })
   }
 })
 
 // ## LOGIN
-router.post("/login", async (req, res) => {
+router.post("/login", [
+  body("email").isEmail().withMessage("Valid email is required"),
+  body("password").notEmpty().withMessage("Password is required")
+], async (req, res) => {
   try {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array()[0].msg })
+    }
+
     const { email, password } = req.body
     const user = await prisma.user.findUnique({ where: { email } })
 
     if (!user) {
-      return res.status(400).json({ message: "Email ya password galat hai" })
+      return res.status(400).json({ message: "Invalid email or password" })
     }
     const isValidPassword = await bcrypt.compare(password, user.passwordHash)
     if (!isValidPassword) {
-      return res.status(400).json({ message: "Email ya password galat hai" })
+      return res.status(400).json({ message: "Invalid email or password" })
     }
 
     const token = jwt.sign(
@@ -68,7 +84,7 @@ router.post("/login", async (req, res) => {
       user: { id: user.id, email: user.email, role: user.role },
     })
   } catch (error) {
-    res.status(500).json({ message: "Kuch galat hua", error: error.message })
+    res.status(500).json({ message: "Server error", error: error.message })
   }
 })
 
@@ -90,7 +106,7 @@ router.get("/me", authMiddleware, async (req, res) => {
 router.post("/logout", async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1]
-    if (!token) return res.status(400).json({ message: "Token nahi mila" })
+    if (!token) return res.status(400).json({ message: "No token provided" })
 
     // Token ko blacklist mein dalo (Redis) — skip if Redis is down
     try {
@@ -100,7 +116,7 @@ router.post("/logout", async (req, res) => {
     }
     res.json({ message: "Logout successful" })
   } catch (error) {
-    res.status(500).json({ message: "Kuch galat hua", error: error.message })
+    res.status(500).json({ message: "Server error", error: error.message })
   }
 })
 

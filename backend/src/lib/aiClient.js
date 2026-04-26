@@ -19,7 +19,10 @@ export const getBrainResponse = async (message, userId) => {
 export const getSentiment = async (message) => {
   try {
     const response = await axios.post(`${AI_URL}/sentiment/analyze`, { text: message }, { timeout: AI_TIMEOUT });
-    return response.data;
+    const data = response.data;
+    // DistilBERT returns POSITIVE/NEGATIVE — map NEGATIVE → ANGRY for escalation logic
+    if (data.label === 'NEGATIVE') data.label = 'ANGRY';
+    return data;
   } catch (error) {
     console.warn('AI Sentiment service unavailable:', error.message);
     return { label: 'NEUTRAL', score: 0.5 };
